@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+    
+<mapper namespace="com.example.shop.chating.dao.ChatMapper">
+
+	<select id="selectMessages" parameterType="int" resultType="ChatDto">
+		<![CDATA[ 
+		
+				SELECT  rownum as sm, b.* FROM 
+				(SELECT rownum as rm , a.* FROM 
+				(SELECT * FROM t_chat WHERE roomId = #{roomId} ORDER BY created_dt DESC)
+				a ORDER BY rm DESC )
+				b WHERE rm <= 10 ORDER BY sm
+		
+		]]>
+	</select>
+	
+	<insert id="insertMessage" parameterType="ChatDto">
+		insert into t_chat (type, message, sender, created_dt, roomId)
+		values (#{type}, #{message}, #{sender}, #{createdDt},#{roomId, jdbcType=VARCHAR}) 
+	</insert>
+	
+	<select id="selectChatRoom" resultType="ChatDto">
+		<![CDATA[ 
+									
+		SELECT * FROM chat_room WHERE bigo != 2
+		]]>
+	</select>
+	
+	<insert id ="insertChatRoom" parameterType="ChatDto">
+		insert into chat_room (roomId, roomName)
+		values (chat_room_seq.nextval, #{roomName}) 
+	</insert>
+	
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+

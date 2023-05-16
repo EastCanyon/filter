@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+    
+<mapper namespace="com.example.shop.curator.dao.HostDAO">
+    <!-- 추천 시설 선택 -->
+    <select id="recMainHost" parameterType="int" resultType="HostDTO">
+        SELECT * FROM MAIN_HOST
+        WHERE MAIN_CODE = #{main_code}
+    </select>
+    
+	<!-- 추천 시설 선택 -->
+	<select id="recMainCon" parameterType="int" resultType="ConDTO">
+	    SELECT C.*, H.MAIN_LOGO, H.MAIN_NAME
+	    FROM MAIN_CON C
+	    JOIN MAIN_HOST H ON C.MAIN_CODE = H.MAIN_CODE
+	    WHERE C.MAIN_CODE = #{main_code}
+	</select>
+
+    
+    <select id="recMainLoc" parameterType="int" resultType="LocDTO">
+		SELECT * FROM MAIN_HOST
+		WHERE MAIN_CODE = #{main_code}	
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+

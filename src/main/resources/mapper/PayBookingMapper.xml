@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+    
+    
+
+    
+<mapper namespace="com.example.shop.payments.dao.PayDAO">
+	
+	
+	
+	<select id="admin_bookingList" parameterType="Page_BookingDTO" resultType="BookingDTO">
+		<![CDATA[	
+		 SELECT b.* FROM
+	   (SELECT rownum AS rm,  a.* FROM
+	   (SELECT * FROM booking ORDER BY booking_code DESC)a ORDER BY rownum)b
+	   WHERE b.rm >= #{startRow} and b.rm <= #{endRow}
+   ]]>
+		
+	</select>
+	
+	<select id="count_admin_bookingList" resultType="int">
+			
+		SELECT count(*) FROM booking
+		
+	</select>
+	
+	<resultMap id="useListMap" type="BookingDTO" autoMapping="true">
+			
+		<association property="user_PageDTO" javaType="main_PageImagesDTO">
+		
+			<result property="filepath" column="filepath"/>
+			<result property="filename" column="filename"/>
+			<result property="main_address" column="main_address"/>
+			
+		</association>
+		
+	</resultMap>
+	
+	<select id="user_bookingList" parameterType="Page_BookingDTO" resultMap="useListMap">
+		<![CDATA[	
+		
+		
+				SELECT b.*,
+			         i.filepath,
+			         i.filename,
+			         h.main_address
+			  FROM (SELECT rownum as rm, a.*
+			        FROM (SELECT * FROM booking b WHERE b.t_id = #{t_id} ORDER BY booking_code DESC) a) b
+			  JOIN main_host h ON b.main_code = h.main_code
+			  JOIN main_image i ON b.main_code = i.main_code
+			  WHERE b.rm >= #{startRow} AND b.rm <= #{endRow}
+			
+		
+		 ]]>
+		 </select>
+		 
+	
+	
+	
+	
+	<select id="count_user_bookingList" parameterType="int" resultType="int">
+			
+		SELECT count(*) FROM booking WHERE t_id = #{t_id} and booking_state = 1
+		
+	</select> 
+	
+	
+	
+<insert id="Insert_tossPayments" parameterType="BookingDTO">
+	
+		<selectKey keyProperty="booking_code" resultType="java.lang.Integer" order="AFTER">
+        	SELECT booking_code_seq.currval FROM DUAL
+    	</selectKey>
+		
+		INSERT INTO booking(
+		booking_code, booking_date, use_date, start_time, end_time
+		,cost,booking_state, t_id, main_code, provider, type) 
+		VALUES (
+		booking_code_seq.nextval,sysdate
+		,#{use_date, jdbcType=VARCHAR},#{start_time, jdbcType=VARCHAR},#{end_time, jdbcType=VARCHAR}
+		,#{cost, jdbcType=VARCHAR},#{booking_state, jdbcType=VARCHAR},
+		#{t_id, jdbcType=VARCHAR},
+		#{main_code, jdbcType=VARCHAR},
+		#{provider, jdbcType=VARCHAR},
+		#{type, jdbcType=VARCHAR}
+		)
+		
+
+	</insert>
+	
+	<insert id="Insert_Key_tossPayments" parameterType="Toss_PaymentsDTO">
+		
+		INSERT INTO 
+		payments_key(booking_code, payments_key, t_id)
+		VALUES(#{booking_code}, #{payments_key}, #{t_id})
+		
+	</insert>
+	
+	<insert id="kakao_Key" parameterType="KakaoPay_KeyDTO">
+		INSERT INTO kakaopay_key
+		VALUES(
+			#{booking_code},
+			#{cid},
+			#{tid},
+			#{cancel_amount},
+			#{cancel_tax_free_amount},
+			#{cancel_vat_amount},
+			sysdate
+			
+		)
+	</insert>
+	
+	
+	<select id="kakaoPay_Cencle" parameterType="int" resultType="KakaoPay_KeyDTO">
+		
+		
+		SELECT * FROM kakaopay_key WHERE booking_code = #{booking_code}
+		
+	</select>
+	
+	<update id = "bookingCancel" parameterType="int">
+		UPDATE booking 
+		SET booking_state = 3, cancle_date=sysdate
+		WHERE booking_code = #{booking_code}
+	</update>
+	
+	<select id="toss_payments_Cencle" parameterType="int" resultType="java.lang.String">
+		SELECT payments_key FROM payments_key WHERE booking_code = #{booking_code}
+	</select>
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+

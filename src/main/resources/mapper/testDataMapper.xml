@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+    
+<mapper namespace="com.example.shop.testDate.dao.TestDataDAO">
+		
+	<!-- totalpage -->
+	<select id="count" resultType="int">
+			
+			SELECT count(*) FROM main_image
+		
+	</select>
+	
+	
+	
+	<!-- main images 뿌리기(페이징처리) -->
+<select id="main_list" parameterType="Page_TestDTO" resultType="main_imagesDTO">
+    <![CDATA[
+    SELECT d.*
+    FROM (
+        SELECT ROW_NUMBER() OVER (ORDER BY c.main_code) AS am, c.*
+        FROM (
+            SELECT b.main_code, b.filepath, b.filename, b.main_address, b.title, b.cost, b.time_about, b.main_category,
+                ROUND(AVG(NVL(e.rating_value, 0)), 2) AS avg_rating, COUNT(e.rating_value) AS count_rating
+            FROM (
+                SELECT a.main_code, a.filepath, a.filename,
+                    f.main_address, f.main_category,
+                    c.title, c.cost, c.time_about
+                FROM main_image a
+                JOIN main_host f ON a.main_code = f.main_code
+                JOIN (
+                    SELECT *
+                    FROM (
+                        SELECT a.*, ROW_NUMBER() OVER (PARTITION BY a.main_code ORDER BY a.main_code) AS RN
+                        FROM MAIN_SUB_PLACE a
+                    ) t
+                    WHERE t.RN = 1
+                ) c ON a.main_code = c.main_code
+            ) b
+            LEFT JOIN review e ON b.main_code = e.main_code
+            JOIN main_sub_place sp ON b.main_code = sp.main_code
+            JOIN main_sub_banner sb ON b.main_code = sb.main_code
+            JOIN main_con m ON b.main_code = m.main_code
+            WHERE 1 = 1
+    ]]>          
+    <if test="regions != null and !regions.isEmpty()">
+        <foreach item="item" collection="regions" open=" AND (" separator=" OR " close=")">
+            SUBSTR(m.main_address, 1, INSTR(m.main_address,' ')-1) = #{item}
+        </foreach>
+    </if>
+    <if test="categories != null and !categories.isEmpty()">
+        <foreach item="item" collection="categories" open=" AND (" separator=" OR " close=")">
+            INSTR(m.main_category, #{item}) > 0
+        </foreach>
+    </if>
+    <if test="etcs != null and !etcs.isEmpty()">
+        <foreach item="item" index="index" collection="etcs" open=" AND (" separator=" OR " close=")">
+            <if test="item != null and item == '대형차량'">
+                NVL(m.parking, '') LIKE '%' || #{item} || '%'
+            </if>
+            <if test="item != null and (item == '샤워실' or item == '탈의실' or item == '로비' or item == '정수기' or item == '대기실')">
+                NVL(m.comfort, '') LIKE '%' || #{item} || '%'
+            </if>
+            <if test="item != null and item == '냉난방'">
+                m.aircon IS NOT NULL
+            </if>
+            <if test="item != null and (item == '창문' or item == '조명')">
+                NVL(m.etc, '') LIKE '%' || #{item} || '%'
+            </if>
+            <if test="item != null and item == '실내'">
+                m.toilet IS NOT NULL
+            </if>
+        </foreach>
+    </if>
+    <![CDATA[
+            GROUP BY b.main_code, b.filepath, b.filename, b.main_address, b.title, b.cost, b.time_about, b.main_category
+        ) c
+    ) d
+    WHERE d.am >= #{startRow} AND d.am <= #{endRow}
+    ]]>
+</select>
+
+
+	
+	<!-- 들여쓰기 레벨 -->
+	<update id="reStepCount" parameterType="ReviewDTO">
+		UPDATE review
+		SET re_step =
+		re_step + 1
+		WHERE ref=#{ref} AND re_step > #{re_step}
+	</update>
+	
+	
+	
+	<!-- main_sub_banner -->
+	<resultMap id="main_sub_bannerMap" type="com.example.shop.testDate.dto.main_sub_bannerDTO" autoMapping="true">
+		
+		
+		<id property="main_code" column="main_code"/>
+		
+		<result property="main_name" column="main_name"/>
+		<result property="main_address" column="main_address"/>
+		<result property="main_logo" column="main_logo"/>
+		<result property="info_detail" column="info_detail"/>
+		<result property="main_comment" column="main_comment"/>
+		<result property="avg_rating" column="avg_rating"/>
+		<result property="count_rating" column="count_rating"/>
+		
+				
+		
+		<association property="mainConDTO" javaType="com.example.shop.testDate.dto.Main_ConDTO">
+			
+			<result property="parking" column="parking"/>
+			<result property="comfort" column="comfort"/>
+			<result property="aircon" column="aircon"/>
+			<result property="etc" column="etc"/>
+			<result property="toilet" column="toilet"/>
+			<result property="sound" column="sound"/>	
+		</association>
+		
+		
+		<association property="placeInfoDTO" javaType="com.example.shop.testDate.dto.Place_InfoDTO">
+		
+			<result property="area" column="area"/>
+			<result property="width" column="width"/>
+			<result property="height" column="height"/>
+			<result property="length" column="length"/>
+			<result property="max" column="max"/>
+		</association>
+		
+		<association property="warningDTO" javaType="com.example.shop.testDate.dto.WarningDTO">
+			
+			<result property="warn_info" column="warn_info"/>
+			<result property="warn_info_detail" column="warn_info_detail"/>
+		</association>
+		
+
+		<collection property="refundRuleDTO" ofType="com.example.shop.testDate.dto.Refund_ruleDTO">
+			
+			<result property="refund_info" column="refund_info"/>
+			<result property="refund_info_detail" column="refund_info_detail"/>
+			
+		</collection>
+
+	
+		<collection property="placeDTO" ofType="com.example.shop.testDate.dto.Main_Sub_PlaceDTO">
+			
+			<result property="title" column="title"/>
+			<result property="cost" column="cost"/>
+			<result property="time_about" column="time_about"/>
+			
+		</collection>
+		
+	
+		
+		<collection property="imagesDTO" ofType="com.example.shop.testDate.dto.main_imagesDTO">
+			
+			<result property="filename" column="filename"/>
+			<result property="filepath" column="filepath"/>
+			
+		</collection>
+	
+	</resultMap>
+
+	
+	<select id="main_list_detail" parameterType="int" resultMap="main_sub_bannerMap">
+		<![CDATA[
+			  SELECT a.*,NVL(f.avg_rating, 0) as avg_rating , NVL(f.count_rating, 0) as count_rating, g.refund_info, g.refund_info_detail, h.title, h.cost, h.time_about, i.filename, i.filepath FROM
+            (SELECT  a.main_code, a.main_name, a.main_address, a.main_logo, a.main_comment, 
+			b.info_detail, 
+			c.parking, c.comfort, c.aircon, c.etc, c.toilet, c.sound, 
+			d.area, d.width, d.height, d.length, d.max,
+			e.warn_info, e.warn_info_detail
+			FROM main_host a
+			JOIN main_info b ON a.main_code = b.main_code
+			JOIN main_con c ON a.main_code = c.main_code
+			JOIN place_info d ON a.main_code = d.main_code
+			JOIN WARNING e ON a.main_code = e.main_code)a
+            LEFT JOIN (SELECT round(AVG(NVL(rating_value,0)),2) as avg_rating
+            , a.main_code, NVL(COUNT(rating_value), 0)
+            as count_rating 
+            FROM review a 
+            WHERE a.main_code =#{main_code} 
+            GROUP BY a.main_code) f ON a.main_code = f.main_code
+            JOIN refund_rule g ON a.main_code = g.main_code
+            JOIN main_sub_place h ON a.main_code = h.main_code
+            JOIN main_sub_banner i ON a.main_code = i.main_code
+            WHERE a.main_code=#{main_code}
+		]]>
+	</select>
+	
+	
+<!--     @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      -->
+
+
+	<select id="reviewCount" parameterType="int" resultType="int">
+
+		SELECT count(*) FROM review
+		WHERE main_code = #{main_code}
+
+	</select>
+
+
+
+	<resultMap id="ReviewSelectMap" type="com.example.shop.testDate.dto.ReviewDTO" autoMapping="true">
+		
+		 <id property="review_code" column="review_code"/>
+		
+		<association property="test_mem_userDTO" javaType="com.example.shop.testDate.dto.Test_Mem_userDTO">
+			<result column="mem_Id" property="mem_Id" />
+			<result column="mem_Name" property="mem_Name" />
+		</association>
+		
+		<collection property="imagesDTO" ofType="com.example.shop.testDate.dto.main_imagesDTO">
+			
+			<result property="filename" column="filename"/>
+			<result property="filepath" column="filepath"/>
+			<result property="type" column="type"/>
+			
+			
+		</collection>
+	
+	
+	</resultMap>
+	
+	
+	<!-- 체육관 리뷰 댓글 답변글 -->
+	<select id="ReviewSelect" parameterType="Page_TestDTO" resultMap="ReviewSelectMap">
+		
+		<![CDATA[
+			
+			SELECT d.* 
+			FROM 
+			(SELECT rownum AS rm, c.* 
+			FROM (
+			SELECT a.main_code, a.review_code,a.regdate, a.moddate, a.content,a.ref, a.re_step,a.re_level, a.rating_value, 
+			b.mem_Id, b.mem_Name,
+			f.filename, f.filepath
+			FROM review a
+			JOIN booking g ON a.booking_code = g.booking_code
+			JOIN main_host e ON a.main_code = e.main_code
+			JOIN mem_user b ON a.t_id = b.t_id
+			JOIN review_image f ON a.review_code = f.review_code
+			ORDER BY a.ref DESC, a.re_step ASC)c)d
+			 WHERE d.rm >=#{startRow} AND d.rm <=#{endRow}
+			and d.main_code = #{main_code}
+			
+		]]>
+		
+	</select>
+	
+	<!-- ref == 0 제목글 ref ==1 답변글 -->
+	<insert id="reviewInsert" parameterType="ReviewDTO">
+		<selectKey keyProperty="review_code" resultType="java.lang.Integer" order="AFTER">
+			SELECT review_code_seq.currval FROM DUAL
+		</selectKey>
+		INSERT INTO review(review_code,main_code,t_id,booking_code,content,rating_value,regdate, moddate, ref, re_step, re_level)
+		VALUES(review_code_seq.nextval, #{main_code}, #{t_id}, #{booking_code}, #{content},
+		#{rating_value}, sysdate, sysdate,
+		<choose>
+			<when test="ref==0">
+				review_code_seq.nextval,
+			</when>
+			<otherwise>
+				#{ref},
+			</otherwise>
+		</choose>
+		#{re_step}, #{re_level}
+		)
+	</insert>
+	
+	
+	<insert id="insertReviewImage" parameterType="main_imagesDTO">
+		INSERT INTO review_image(review_code, filename, filepath, type)
+		VALUES (#{review_code}, #{filename, jdbcType=VARCHAR}, #{filepath, jdbcType=VARCHAR}, #{type, jdbcType=VARCHAR})
+	
+	
+	</insert>
+	
+	<update id="updateReviewImage" parameterType="main_imagesDTO">
+		
+		UPDATE review_image
+		SET filename = #{filename, jdbcType=VARCHAR}, filepath = #{filepath, jdbcType=VARCHAR}, type = #{type, jdbcType=VARCHAR}
+		WHERE review_code = #{review_code}
+		
+	</update>
+	
+	
+	<select id="reviewOneSelect" parameterType="int" resultType="main_imagesDTO">
+		SELECT filepath FROM review_image WHERE review_code = #{review_code}
+	</select>
+	
+	<update id="reviewUpdate" parameterType="ReviewDTO">
+		
+		UPDATE review
+		SET content = #{content, jdbcType=VARCHAR}, rating_value = #{rating_value}, moddate = sysdate
+		WHERE review_code = #{review_code}
+	</update>
+	
+	<delete id="deleteReview" parameterType="int">
+		
+		DELETE FROM review
+		WHERE ref = #{ref}
+		
+	</delete>
+	
+	
+	<delete id="deleteReviewImage" parameterType="int">
+		
+		DELETE FROM review_image
+		WHERE review_code = #{review_code}
+		
+	</delete>
+	
+	
+
+	
+	<select id="reviewImagesSelectOne" parameterType="int" resultType="main_imagesDTO">
+		
+		
+		SELECT filepath FROM review_image WHERE review_code = #{review_code}
+		
+		
+	</select>
+	
+		
+	
+	<!--<insert id="insertReview" parameterType="ReviewDTO">
+		<selectKey keyProperty="review_code" resultType="java.lang.Integer" order="AFTER">
+			SELECT review_code_seq.currval FROM DUAL
+		</selectKey>
+		
+		INSERT INTO review(review_code, booking_code, content, rating_value, regdate, moddate)
+		VALUES (review_code_seq.nextval, #{booking_code}, #{content, javaType=VARCHAR}, #{rating_value}, sysdate, sysdate)
+		
+		
+	</insert>-->
+	
+	
+	<update id="reviewImagesUpdataDelete" parameterType="main_imagesDTO">
+		
+		UPDATE review_image
+		set filepath = null
+		WHERE review_code = #{review_code} 
+		and filepath= #{filepath}
+		
+	</update>
+	
+	
+	<select id="MapSelectList" parameterType="Page_MapDTO" resultType="main_imagesDTO">
+		<![CDATA[
+		
+		SELECT d.* FROM 
+  (SELECT
+  rownum AS rm,
+  c.*
+FROM (
+  SELECT
+    b.main_code,
+    b.filepath,
+    b.filename,
+    b.main_address,
+    b.title,
+    b.cost,
+    b.time_about,
+    b.latitude,
+    b.longitude,
+    ROUND(AVG(NVL(d.rating_value,0)), 2) AS avg_rating,
+    COUNT(d.rating_value) AS count_rating,
+   
+    ROUND(6371 * ACOS(
+      COS(RADIANS(${latitude})) * COS(RADIANS(b.latitude)) * COS(RADIANS(b.longitude - ${longitude})) + SIN(RADIANS(${latitude})) * SIN(RADIANS(b.latitude)))
+    , 2) AS distance
+  FROM
+    (SELECT a.*
+     FROM (
+       SELECT
+         a.main_code,
+         a.filepath,
+         a.filename,
+         b.main_address,
+         TO_number(b.latitude) AS latitude,
+         TO_number(b.longitude) AS longitude,
+         c.title,
+         c.cost,
+         c.time_about
+       FROM main_image a
+       JOIN main_host b ON a.main_code = b.main_code
+       JOIN (
+         SELECT *
+         FROM (
+           SELECT
+             a.*,
+             ROW_NUMBER() OVER (PARTITION BY a.main_code ORDER BY a.main_code) AS RN
+           FROM MAIN_SUB_PLACE a
+         ) t
+         WHERE t.RN=1
+       ) c ON a.main_code = c.main_code
+     ) a
+    ) b
+  LEFT JOIN review d ON b.main_code = d.main_code
+  GROUP BY
+    b.main_code,
+    b.filepath,
+    b.filename,
+    b.main_address,
+    b.title,
+    b.cost,
+    b.time_about,
+    b.latitude,
+    b.longitude
+  ORDER BY
+    distance,
+    b.main_code
+) c
+ORDER BY
+  rownum)d
+  WHERE d.rm >=#{startRow} and d.rm<=#{endRow}
+		]]>
+		
+	</select>
+	
+	
+	
+	
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
